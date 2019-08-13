@@ -27,6 +27,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.SocketPolicy;
 import okhttp3.mockwebserver.internal.duplex.MockDuplexResponseBody;
+import okhttp3.testing.PlatformRule;
 import okhttp3.tls.HandshakeCertificates;
 import okio.BufferedSink;
 import okio.BufferedSource;
@@ -241,7 +242,7 @@ public final class DuplexTest {
     mockDuplexResponseBody.awaitSuccess();
 
     assertThat(listener.recordedEventTypes()).containsExactly(
-        "CallStart", "DnsStart", "DnsEnd", "ConnectStart",
+        "CallStart", "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd", "ConnectStart",
         "SecureConnectStart", "SecureConnectEnd", "ConnectEnd", "ConnectionAcquired",
         "RequestHeadersStart", "RequestHeadersEnd", "RequestBodyStart", "ResponseHeadersStart",
         "ResponseHeadersEnd", "ResponseBodyStart", "ResponseBodyEnd", "RequestBodyEnd",
@@ -341,7 +342,7 @@ public final class DuplexTest {
     mockDuplexResponseBody.awaitSuccess();
 
     assertThat(listener.recordedEventTypes()).containsExactly(
-        "CallStart", "DnsStart", "DnsEnd", "ConnectStart",
+        "CallStart", "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd", "ConnectStart",
         "SecureConnectStart", "SecureConnectEnd", "ConnectEnd", "ConnectionAcquired",
         "RequestHeadersStart", "RequestHeadersEnd", "RequestBodyStart", "ResponseHeadersStart",
         "ResponseHeadersEnd", "ResponseBodyStart", "ResponseBodyEnd", "RequestHeadersStart",

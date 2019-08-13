@@ -25,7 +25,7 @@ task copyResourcesTemplates(type: Copy) {
 dependencies {
   api project(':okhttp')
   api project(':okhttp-logging-interceptor')
-  implementation deps.airline
+  implementation deps.picocli
   implementation deps.guava
 
   testImplementation project(':okhttp-testing-support')

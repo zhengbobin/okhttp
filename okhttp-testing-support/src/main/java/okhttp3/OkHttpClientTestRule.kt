@@ -15,6 +15,7 @@
  */
 package okhttp3
 
+import okhttp3.testing.Flaky
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.rules.TestRule
 import org.junit.runner.Description
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentLinkedDeque
 
 /** Apply this rule to tests that need an OkHttpClient instance. */
 class OkHttpClientTestRule : TestRule {
+  private val clientEventsList = mutableListOf<String>()
   private var prototype: OkHttpClient? = null
 
   /**
@@ -40,13 +42,21 @@ class OkHttpClientTestRule : TestRule {
   }
 
   fun newClientBuilder(): OkHttpClient.Builder {
-    return checkNotNull(prototype) { "don't create clients in test initialization!" }.newBuilder()
+    return checkNotNull(prototype) { "don't create clients in test initialization!" }
+        .newBuilder()
+        .eventListener(ClientRuleEventListener { addEvent(it) })
+  }
+
+  @Synchronized private fun addEvent(it: String) {
+    clientEventsList.add(it)
   }
 
   fun ensureAllConnectionsReleased() {
-    val connectionPool = prototype!!.connectionPool
-    connectionPool.evictAll()
-    assertThat(connectionPool.idleConnectionCount()).isEqualTo(0)
+    prototype?.let {
+      val connectionPool = it.connectionPool
+      connectionPool.evictAll()
+      assertThat(connectionPool.connectionCount()).isEqualTo(0)
+    }
   }
 
   override fun apply(base: Statement, description: Description): Statement {
@@ -55,6 +65,10 @@ class OkHttpClientTestRule : TestRule {
         acquireClient()
         try {
           base.evaluate()
+          logEventsIfFlaky(description)
+        } catch (t: Throwable) {
+          logEvents()
+          throw t
         } finally {
           ensureAllConnectionsReleased()
           releaseClient()
@@ -62,15 +76,46 @@ class OkHttpClientTestRule : TestRule {
       }
 
       private fun acquireClient() {
-        prototype = prototypes.poll() ?: OkHttpClient.Builder()
-            .dns(SINGLE_INET_ADDRESS_DNS) // Prevent unexpected fallback addresses.
-            .build()
+        prototype = prototypes.poll() ?: freshClient()
       }
 
       private fun releaseClient() {
-        prototypes.push(prototype)
-        prototype = null
+        prototype?.let {
+          prototypes.push(it)
+          prototype = null
+        }
       }
+    }
+  }
+
+  private fun logEventsIfFlaky(description: Description) {
+    if (isTestFlaky(description)) {
+      logEvents()
+    }
+  }
+
+  private fun isTestFlaky(description: Description): Boolean {
+    return description.annotations.any { it.annotationClass == Flaky::class } ||
+        description.testClass.annotations.any { it.annotationClass == Flaky::class }
+  }
+
+  @Synchronized private fun logEvents() {
+    // Will be ineffective if test overrides the listener
+    println("Events (${clientEventsList.size})")
+
+    for (e in clientEventsList) {
+      println(e)
+    }
+  }
+
+  /**
+   * Called if a test is known to be leaky.
+   */
+  fun abandonClient() {
+    prototype?.let {
+      prototype = null
+      it.dispatcher.executorService.shutdownNow()
+      it.connectionPool.evictAll()
     }
   }
 
@@ -91,6 +136,12 @@ class OkHttpClientTestRule : TestRule {
         val addresses = Dns.SYSTEM.lookup(hostname)
         return listOf(addresses[0])
       }
+    }
+
+    private fun freshClient(): OkHttpClient {
+      return OkHttpClient.Builder()
+          .dns(SINGLE_INET_ADDRESS_DNS) // Prevent unexpected fallback addresses.
+          .build()
     }
   }
 }

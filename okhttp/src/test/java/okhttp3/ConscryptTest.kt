@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Square, Inc.
+ * Copyright (C) 2018 Square, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@ package okhttp3
 
 import okhttp3.internal.platform.ConscryptPlatform
 import okhttp3.internal.platform.Platform
+import okhttp3.testing.PlatformRule
 import org.assertj.core.api.Assertions.assertThat
 import org.conscrypt.Conscrypt
-import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.net.InetAddress
@@ -35,17 +36,17 @@ class ConscryptTest {
   @Rule public val platform = PlatformRule.conscrypt()
 
   @JvmField @Rule val clientTestRule = OkHttpClientTestRule()
+
   private lateinit var client: OkHttpClient
 
-  @Before
-  fun setUp() {
+  @Before fun setUp() {
+    platform.assumeConscrypt()
     client = clientTestRule.newClient()
-    assertThat(Conscrypt.isConscrypt(Platform.get().platformTrustManager())).isTrue()
   }
 
-  @After
-  fun tearDown() {
-    clientTestRule.ensureAllConnectionsReleased()
+  @Test
+  fun testTrustManager() {
+    assertThat(Conscrypt.isConscrypt(Platform.get().platformTrustManager())).isTrue()
   }
 
   private fun assumeNetwork() {
@@ -57,29 +58,31 @@ class ConscryptTest {
   }
 
   @Test
+  @Ignore
   fun testMozilla() {
     assumeNetwork()
 
     val request = Request.Builder().url("https://mozilla.org/robots.txt").build()
 
-    val response = client.newCall(request).execute()
-
-    assertThat(response.protocol).isEqualTo(Protocol.HTTP_2)
-    assertThat(response.handshake!!.tlsVersion).isEqualTo(TlsVersion.TLS_1_3)
+    client.newCall(request).execute().use {
+      assertThat(it.protocol).isEqualTo(Protocol.HTTP_2)
+      assertThat(it.handshake!!.tlsVersion).isEqualTo(TlsVersion.TLS_1_3)
+    }
   }
 
   @Test
+  @Ignore
   fun testGoogle() {
     assumeNetwork()
 
     val request = Request.Builder().url("https://google.com/robots.txt").build()
 
-    val response = client.newCall(request).execute()
-
-    assertThat(response.protocol).isEqualTo(Protocol.HTTP_2)
-    if (response.handshake!!.tlsVersion != TlsVersion.TLS_1_3) {
-      System.err.println("Flaky TLSv1.3 with google")
-//    assertThat(response.handshake()!!.tlsVersion).isEqualTo(TlsVersion.TLS_1_3)
+    client.newCall(request).execute().use {
+      assertThat(it.protocol).isEqualTo(Protocol.HTTP_2)
+      if (it.handshake!!.tlsVersion != TlsVersion.TLS_1_3) {
+        System.err.println("Flaky TLSv1.3 with google")
+//    assertThat(it.handshake()!!.tlsVersion).isEqualTo(TlsVersion.TLS_1_3)
+      }
     }
   }
 
@@ -91,12 +94,14 @@ class ConscryptTest {
 
   @Test
   fun testVersion() {
+    val version = Conscrypt.version()
+
     assertTrue(ConscryptPlatform.atLeastVersion(1, 4, 9))
-    assertTrue(ConscryptPlatform.atLeastVersion(2))
-    assertTrue(ConscryptPlatform.atLeastVersion(2, 1))
-    assertTrue(ConscryptPlatform.atLeastVersion(2, 1, 0))
-    assertFalse(ConscryptPlatform.atLeastVersion(2, 1, 1))
-    assertFalse(ConscryptPlatform.atLeastVersion(2, 2))
-    assertFalse(ConscryptPlatform.atLeastVersion(9))
+    assertTrue(ConscryptPlatform.atLeastVersion(version.major()))
+    assertTrue(ConscryptPlatform.atLeastVersion(version.major(), version.minor()))
+    assertTrue(ConscryptPlatform.atLeastVersion(version.major(), version.minor(), version.patch()))
+    assertFalse(ConscryptPlatform.atLeastVersion(version.major(), version.minor(), version.patch() + 1))
+    assertFalse(ConscryptPlatform.atLeastVersion(version.major(), version.minor() + 1))
+    assertFalse(ConscryptPlatform.atLeastVersion(version.major() + 1))
   }
 }

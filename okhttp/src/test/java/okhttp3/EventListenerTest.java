@@ -48,6 +48,7 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.SocketPolicy;
+import okhttp3.testing.PlatformRule;
 import okhttp3.tls.HandshakeCertificates;
 import okio.Buffer;
 import okio.BufferedSink;
@@ -111,7 +112,8 @@ public final class EventListenerTest {
     assertThat(response.body().string()).isEqualTo("abc");
     response.body().close();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
@@ -141,7 +143,8 @@ public final class EventListenerTest {
 
     completionLatch.await();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
@@ -162,7 +165,8 @@ public final class EventListenerTest {
       assertThat(expected.getMessage()).isIn("timeout", "Read timed out");
     }
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseFailed", "ConnectionReleased",
         "CallFailed");
@@ -190,7 +194,8 @@ public final class EventListenerTest {
       assertThat(expected.getMessage()).isEqualTo("unexpected end of stream");
     }
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseFailed", "ConnectionReleased", "CallFailed");
@@ -210,7 +215,8 @@ public final class EventListenerTest {
       assertThat(expected.getMessage()).isEqualTo("Canceled");
     }
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "CallFailed");
+    assertThat(listener.recordedEventTypes())
+        .containsExactly("CallStart", "ProxySelectStart", "ProxySelectEnd", "CallFailed");
   }
 
   private void assertSuccessfulEventOrder(Matcher<Response> responseMatcher) throws IOException {
@@ -225,7 +231,8 @@ public final class EventListenerTest {
     assumeThat(response, responseMatcher);
 
     assertThat(listener.recordedEventTypes()).containsExactly(
-        "CallStart", "DnsStart", "DnsEnd", "ConnectStart",
+        "CallStart", "ProxySelectStart", "ProxySelectEnd",
+        "DnsStart", "DnsEnd", "ConnectStart",
         "SecureConnectStart", "SecureConnectEnd", "ConnectEnd", "ConnectionAcquired",
         "RequestHeadersStart", "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd",
         "ResponseBodyStart", "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
@@ -249,7 +256,8 @@ public final class EventListenerTest {
     Response response = call.execute();
     response.close();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "ConnectionAcquired",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "ConnectionAcquired",
         "RequestHeadersStart", "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd",
         "ResponseBodyStart", "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
   }
@@ -910,7 +918,8 @@ public final class EventListenerTest {
     Response response = call.execute();
     response.body().close();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
@@ -927,7 +936,8 @@ public final class EventListenerTest {
     Response response = call.execute();
     response.body().close();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
@@ -945,7 +955,8 @@ public final class EventListenerTest {
     Response response = call.execute();
     response.body().close();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
@@ -1067,7 +1078,7 @@ public final class EventListenerTest {
     }
 
     assertThat(listener.recordedEventTypes()).containsExactly(
-        "CallStart", "DnsStart", "DnsEnd", "ConnectStart",
+        "CallStart", "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd", "ConnectStart",
         "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart", "RequestHeadersEnd",
         "RequestBodyStart", "RequestFailed", "ConnectionReleased", "CallFailed");
   }
@@ -1128,7 +1139,8 @@ public final class EventListenerTest {
     assertThat(response.body().string()).isEqualTo("abc");
     response.body().close();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
@@ -1168,7 +1180,8 @@ public final class EventListenerTest {
     Call call = client.newCall(new Request.Builder().url(server.url("/")).build());
     call.execute();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "RequestHeadersStart", "RequestHeadersEnd", "ResponseHeadersStart",
@@ -1188,10 +1201,12 @@ public final class EventListenerTest {
     Call call = client.newCall(new Request.Builder().url(server.url("/")).build());
     call.execute();
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
-        "ResponseBodyEnd", "ConnectionReleased", "DnsStart", "DnsEnd", "ConnectStart", "ConnectEnd",
+        "ResponseBodyEnd", "ConnectionReleased", "ProxySelectStart", "ProxySelectEnd",
+        "DnsStart", "DnsEnd", "ConnectStart", "ConnectEnd",
         "ConnectionAcquired", "RequestHeadersStart", "RequestHeadersEnd", "ResponseHeadersStart",
         "ResponseHeadersEnd", "ResponseBodyStart", "ResponseBodyEnd", "ConnectionReleased",
         "CallEnd");
@@ -1214,7 +1229,8 @@ public final class EventListenerTest {
     Response response = call.execute();
     assertThat(response.body().string()).isEqualTo("b");
 
-    assertThat(listener.recordedEventTypes()).containsExactly("CallStart", "DnsStart", "DnsEnd",
+    assertThat(listener.recordedEventTypes()).containsExactly("CallStart",
+        "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd",
         "ConnectStart", "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart",
         "RequestHeadersEnd", "ResponseHeadersStart", "ResponseHeadersEnd", "ResponseBodyStart",
         "ResponseBodyEnd", "RequestHeadersStart", "RequestHeadersEnd", "ResponseHeadersStart",
@@ -1258,7 +1274,7 @@ public final class EventListenerTest {
     call.execute();
 
     assertThat(listener.recordedEventTypes()).containsExactly(
-        "CallStart", "DnsStart", "DnsEnd", "ConnectStart",
+        "CallStart", "ProxySelectStart", "ProxySelectEnd", "DnsStart", "DnsEnd", "ConnectStart",
         "ConnectEnd", "ConnectionAcquired", "RequestHeadersStart", "RequestHeadersEnd",
         "ResponseHeadersStart", "RequestBodyStart", "RequestBodyEnd", "ResponseHeadersEnd",
         "ResponseBodyStart", "ResponseBodyEnd", "ConnectionReleased", "CallEnd");
